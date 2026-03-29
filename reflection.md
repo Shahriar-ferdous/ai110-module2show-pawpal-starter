@@ -25,13 +25,19 @@ Scheduler → builds the plan .
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers three constraints when building a plan:
+
+1. **Time slots** — the owner declares available windows (e.g. "08:00", "12:00"). Tasks can only be placed into those slots; the scheduler will not invent new ones.
+2. **Priority** — tasks are ranked high → medium → low using a `PRIORITY_ORDER` dict, so high-priority care (medication, feeding) lands in the earliest open slot.
+3. **Overdue status** — any task whose `due_date` has already passed jumps to the front of the queue, ahead of all priority levels, so nothing critical is silently dropped.
+
+Overdue status was treated as the most important constraint because a missed flea medication or vet-recommended feeding schedule has real health consequences, while a low-priority grooming task being delayed a day does not.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+The scheduler uses a greedy first-fit strategy: it sorts tasks once, then assigns them to slots in order, stopping when it runs out of slots. This means the schedule is built in O(n log n) time and is easy to reason about, but it does not guarantee an optimal packing. A 30-minute walk assigned to the first slot may block two shorter tasks that could have fit there together.
+
+This tradeoff is reasonable for a pet care scenario because the number of tasks and slots is small (typically under 10 each), so the theoretical suboptimality rarely matters in practice. Simplicity and predictability — the owner can look at the output and immediately understand why each task landed where it did — is more valuable here than squeezing out maximum utilization.
 
 ---
 
