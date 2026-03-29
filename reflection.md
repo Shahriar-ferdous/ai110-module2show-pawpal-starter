@@ -1,7 +1,9 @@
 # PawPal+ Project Reflection
 
 ## 1. System Design
-
+- The User should be able to add a pet
+- The User will be able to see today's tasks
+- The User should be able to schedule a walk
 **a. Initial design**
 
 - Briefly describe your initial UML design.
