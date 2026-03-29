@@ -8,13 +8,18 @@
 
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
+I have included 4 classes in the UML design: Owner, Pet, Task, and Scheduler. 
+Owner → provides constraints
+Pet → provides context
+Task → provides work items
+Scheduler → builds the plan .
 
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
----
+--- Yes, the design was missing pet: "Pet" = None   # which pet this task is for. The Task class has no link to pet and without this the build_plan can't use pet context(age, dietary needs) when scheduling a task.
 
 ## 2. Scheduling Logic and Tradeoffs
 
