@@ -117,8 +117,55 @@ st.subheader("Build Schedule")
 
 if st.button("Generate schedule", disabled=not owner.get_all_tasks()):
     plan = scheduler.build_plan()       # ← Scheduler.build_plan() does the work
-    if plan:
-        st.success("Schedule built!")
-        st.text(scheduler.generate_summary())
-    else:
+
+    if not plan:
         st.warning("No tasks could be scheduled. Add tasks first.")
+    else:
+        st.success(f"Schedule built — {len(plan)} task(s) assigned.")
+
+        # ── Sorted schedule table (sort_by_time) ──────────────────────────
+        sorted_entries = scheduler.sort_by_time()
+        pet_lookup = {
+            id(task): pet.name
+            for pet in owner.pets
+            for task in pet.tasks
+        }
+        rows = [
+            {
+                "Time": slot,
+                "Pet": pet_lookup.get(id(task), "—"),
+                "Task": task.title,
+                "Category": task.category,
+                "Priority": task.priority.upper(),
+                "Duration": f"{task.duration_minutes} min",
+                "Frequency": task.frequency,
+                "Overdue": "⚠ Yes" if task.is_overdue() else "—",
+            }
+            for slot, task in sorted_entries
+        ]
+        st.table(rows)
+
+        # ── Conflict warnings (assign_task warnings) ──────────────────────
+        if scheduler.warnings:
+            st.markdown("**Scheduling conflicts detected:**")
+            for w in scheduler.warnings:
+                st.warning(w)
+
+        # ── Overlap conflicts between scheduled tasks (detect_conflicts) ──
+        conflicts = scheduler.detect_conflicts()
+        if conflicts:
+            st.markdown("**Time-overlap conflicts in the schedule:**")
+            for c in conflicts:
+                label = "Same pet" if c["kind"] == "same_pet" else "Cross-pet"
+                st.warning(
+                    f"{label} — **{c['task_a'].title}** ({c['pet_a']}) at {c['slot_a']}"
+                    f" overlaps **{c['task_b'].title}** ({c['pet_b']}) at {c['slot_b']}"
+                )
+
+        # ── Unscheduled tasks (more tasks than available slots) ───────────
+        scheduled_ids = {id(t) for t in plan.values()}
+        unscheduled = [t for t in owner.get_all_tasks() if id(t) not in scheduled_ids]
+        if unscheduled:
+            st.markdown(f"**{len(unscheduled)} task(s) could not fit into available slots:**")
+            for t in unscheduled:
+                st.info(f"Unscheduled: {t.title} [{t.priority}] — {t.due_date}")

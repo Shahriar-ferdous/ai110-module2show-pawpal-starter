@@ -22,14 +22,31 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
-## Smarter Scheduling
+## ✨ Features
 
-The core scheduling logic in `pawpal_system.py` goes beyond a basic task list with four algorithms built on top of the base `Scheduler` class:
+### Core Object Model
+- **Owner** tracks available time slots and owns a list of `Pet` objects — the single source of scheduling constraints
+- **Pet** stores species, age, and dietary context, and owns its task list (composition, not loose coupling)
+- **Task** holds category, duration, priority, frequency, and due date — all fields that directly affect scheduling decisions
+- **Scheduler** is the brain: it reads constraints from `Owner`, pulls tasks from all pets via `get_all_tasks()`, and builds the plan
 
-- **Sort by time** — `sort_by_time()` returns scheduled tasks in chronological order using a `_to_minutes` key function, so output is always clock-ordered regardless of insertion order.
-- **Filter tasks** — `filter_tasks(status, pet_name)` lets you query the live schedule by completion status, by pet, or both at once. It uses `id()` identity checks to reliably match task objects back to their owning pet.
-- **Recurring task auto-advance** — calling `mark_complete()` on a daily or weekly task automatically advances its `due_date` by the correct `timedelta` and resets its status to pending, so it reappears in the next build without any manual intervention.
-- **Conflict detection** — `detect_conflicts()` checks every pair of scheduled tasks for time-window overlap using interval arithmetic (`start_a < end_b and start_b < end_a`). It labels each conflict as `same_pet` or `cross_pet` and is optimized with a pre-built reverse lookup and `itertools.combinations` to avoid redundant work. `assign_task` uses the same overlap logic to emit a non-fatal warning and skip the conflicting task rather than crashing the program.
+### Scheduling Algorithms
+- **Priority-first planning** — `build_plan()` sorts tasks before assigning them: overdue tasks are promoted to the front, then tasks are ordered by priority (`high → medium → low`) using a stable sort
+- **Chronological display** — `sort_by_time()` converts `"HH:MM"` slot strings to total minutes and returns `(slot, task)` pairs in ascending clock order, so output is always readable regardless of insertion order
+- **Task filtering** — `filter_tasks(status, pet_name)` lets you query the live schedule by completion status, by pet, or both at once; uses Python `id()` identity checks to reliably match task objects back to their owning pet
+
+### Conflict Handling
+- **Non-fatal overlap warnings** — `assign_task()` checks every incoming task against all already-scheduled tasks using interval arithmetic (`start_a < end_b and start_b < end_a`); on overlap it records a human-readable warning and skips the task instead of raising an exception, so the rest of the schedule continues building
+- **Post-build conflict audit** — `detect_conflicts()` scans every pair of scheduled tasks with `itertools.combinations` and labels each conflict as `same_pet` or `cross_pet`, useful for surfacing subtle overlaps that slipped through
+
+### Task Lifecycle
+- **Daily recurrence auto-advance** — calling `mark_complete()` on a `frequency="daily"` or `frequency="weekly"` task automatically moves its `due_date` forward by the correct `timedelta` and resets status to `"pending"`, so the task reappears in the next `build_plan()` without manual intervention
+- **Overdue detection** — `is_overdue()` compares `due_date` against today using `datetime.date` and only flags tasks still in `"pending"` status
+
+## 📸 Demo
+
+<a href="/course_images/ai110/pawpal_screenshot.png" target="_blank"><img src='/course_images/ai110/pawpal_screenshot.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+
 
 ## Getting started
 
@@ -50,3 +67,27 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+## Testing PawPal+
+
+### Run the test suite
+
+```bash
+python -m pytest tests/pawpal_test.py -v
+```
+
+### What the tests cover
+
+| Test | What it verifies |
+|------|-----------------|
+| `test_mark_complete_changes_status` | A task starts as `"pending"` and becomes `"complete"` after `mark_complete()` |
+| `test_add_task_increases_pet_task_count` | `add_task()` correctly grows a pet's task list |
+| `test_sort_by_time_returns_chronological_order` | `sort_by_time()` returns `(slot, task)` pairs in ascending clock order regardless of insertion order |
+| `test_daily_task_advances_due_date_after_complete` | Completing a `frequency="daily"` task moves its `due_date` forward by exactly one day and resets `status` to `"pending"` |
+| `test_conflict_detection_warns_on_duplicate_slot` | `assign_task()` keeps the first task, skips the second, and records a warning when two tasks share the same time slot |
+
+### Confidence Level
+
+**3 / 5 stars**
+
+The five tests cover the most critical happy paths and one key conflict scenario, giving solid confidence in core task lifecycle and scheduling correctness. The remaining two stars are withheld because the suite does not yet cover: overdue prioritization in `build_plan()`, the `filter_tasks()` query logic, cross-slot overlap detection (e.g. `08:00` + 60 min vs `08:30`), or the behavior of `"once"` vs `"weekly"` recurrence — all areas where subtle bugs could still hide.
