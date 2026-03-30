@@ -47,8 +47,6 @@ Your final app should:
 
 ![PawPal App](pawpal_screenshot.png)
 
-<!-- CodePath submission embed (renders on the CodePath platform) -->
-<a href="/course_images/ai110/pawpal_screenshot.png" target="_blank"><img src='/course_images/ai110/pawpal_screenshot.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
 
 
 ## Getting started
